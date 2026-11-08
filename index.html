@@ -1,0 +1,417 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#542135">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="יומן היין">
+<title>יומן היין שלי</title>
+<style>
+:root{--wine:#69283d;--dark:#542135;--cream:#fbf6ef;--border:#e5d7cc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:#302827;font-family:system-ui,-apple-system,Arial,sans-serif}
+header{background:var(--dark);color:#fff;padding:calc(27px + env(safe-area-inset-top)) 22px 25px}
+header small{color:#eac3ba;letter-spacing:2px;font-size:11px}
+header h1{font:30px Georgia,serif;margin:10px 0}
+header p{font-size:13px;color:#e8d4d8;margin:0}
+main{padding:20px;max-width:650px;margin:auto;padding-bottom:65px}
+nav{display:flex;gap:8px;background:#eee5db;padding:5px;border-radius:12px;margin-bottom:23px}
+button{border:0;border-radius:10px;padding:12px;font:inherit;font-size:14px;cursor:pointer}
+nav button{flex:1;background:transparent;color:#624a51}
+nav button.active{background:white;color:var(--wine);box-shadow:0 1px 5px #0001}
+.primary{background:var(--wine);color:white;font-weight:700;width:100%}
+.secondary{background:#eee2da;color:var(--wine)}
+h2{font-size:19px;color:var(--dark);margin:0 0 16px}
+label{display:block;font-size:13px;font-weight:650;margin-bottom:16px}
+input,select,textarea{display:block;width:100%;margin-top:7px;padding:12px;border:1px solid #ded3c8;border-radius:9px;background:white;color:#302827;font:inherit;font-size:14px}
+textarea{min-height:100px;resize:vertical}
+input[type=range]{accent-color:var(--wine)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hidden{display:none!important}
+.rating{text-align:center;margin:14px 0 21px}
+.glasses{display:flex;direction:ltr;justify-content:center;gap:5px;font-size:29px;margin:12px}
+.glass{font-size:29px;padding:3px;background:transparent;opacity:.2}
+.glass.full{opacity:1}
+.glass.half{opacity:.55}
+.rating strong{color:var(--wine)}
+.upload{display:block;background:#f7eded;border:1px dashed #b79b9e;text-align:center;padding:20px;border-radius:12px;color:var(--wine);cursor:pointer}
+.photos{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}
+.photo{position:relative}
+.photo img{height:84px;width:84px;object-fit:cover;border-radius:9px}
+.photo button{position:absolute;top:-7px;left:-7px;border-radius:50%;width:25px;height:25px;padding:0;color:white;background:var(--dark)}
+.muted{font-size:12px;color:#85756e}
+.card{display:flex;background:white;border:1px solid var(--border);border-radius:13px;margin-bottom:12px;overflow:hidden;min-height:110px;cursor:pointer}
+.card img{width:105px;object-fit:cover}
+.card-content{padding:14px;flex:1}
+.card h3{font-size:16px;margin:0 0 7px}
+.card p{font-size:12px;color:#766767;margin:6px 0}
+.detail{background:white;border:1px solid var(--border);border-radius:14px;padding:18px}
+.detail h2{font:26px Georgia,serif}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0}
+.info div{background:#f7f1eb;padding:10px;border-radius:9px;font-size:13px;overflow-wrap:anywhere}
+.info b{display:block;color:#895c65;font-size:11px;margin-bottom:5px}
+.gallery{display:flex;gap:8px;overflow-x:auto;margin:14px 0}
+.gallery img{width:120px;height:120px;object-fit:cover;border-radius:10px}
+.actions{display:flex;gap:8px;margin-top:16px}
+.empty{text-align:center;padding:45px 10px;color:#806f72}
+.toolbar{display:flex;gap:8px;margin:20px 0;flex-wrap:wrap}
+.toolbar button{flex:1}
+.story{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:14px}
+.notice{font-size:11px;color:#85756e;text-align:center;margin:20px 0}
+</style>
+</head>
+<body>
+<header>
+<small>MY WINE JOURNAL · EST. 2026</small>
+<h1>יומן היין שלי 🍷</h1>
+<p>כל בקבוק הוא זיכרון. כל טעימה היא סיפור.</p>
+</header>
+<main>
+<nav>
+<button id="listTab" class="active" onclick="show('list')">האוסף שלי</button>
+<button id="addTab" onclick="newWine()">+ הוספת יין</button>
+</nav>
+
+<section id="list">
+<h2>אוסף היינות שלי <span id="count" class="muted"></span></h2>
+<input id="search" placeholder="חיפוש לפי שם, יקב, מדינה..." oninput="renderList()">
+<div id="cards"></div>
+<div class="toolbar">
+<button class="secondary" onclick="exportBackup()">גיבוי היומן</button>
+<button class="secondary" onclick="document.getElementById('restore').click()">שחזור מגיבוי</button>
+</div>
+<input type="file" id="restore" accept=".json,application/json" hidden onchange="importBackup(event)">
+</section>
+
+<section id="add" class="hidden">
+<h2 id="formTitle">טעימה חדשה</h2>
+<form id="wineForm">
+<label>שם היין *
+<input name="name" required placeholder="לדוגמה: Château Margaux">
+</label>
+<label>שם היקב
+<input name="winery" placeholder="שם היקב">
+</label>
+<div class="grid">
+<label>ארץ מוצא
+<input name="country" placeholder="צרפת">
+</label>
+<label>אזור גידול
+<input name="region" placeholder="בורדו">
+</label>
+</div>
+<div class="grid">
+<label>שנת בציר
+<input name="vintage" type="number" min="1800" max="2100" placeholder="2021">
+</label>
+<label>צבע היין
+<select name="color">
+<option>אדום</option><option>לבן</option><option>רוזה</option>
+<option>מבעבע</option><option>כתום</option><option>אחר</option>
+</select>
+</label>
+</div>
+<label>תאריך הטעימה
+<input type="date" name="date" id="wineDate">
+</label>
+<label>תווי טעם וריח
+<textarea name="notes" placeholder="פירות יער, וניל, אלון, חומציות, גוף וסיומת..."></textarea>
+</label>
+<label>הסיפור מאחורי היין
+<textarea name="story" placeholder="איפה טעמנו? עם מי? איך גילינו את הבקבוק?"></textarea>
+</label>
+<div class="rating">
+<label>הדירוג שלי</label>
+<div class="glasses" id="glasses"></div>
+<input type="range" id="rating" min="0.5" max="5" step="0.5" value="3.5" oninput="updateRating()">
+<strong id="ratingText"></strong>
+</div>
+<label>תמונות מהטעימה (עד 5)</label>
+<div id="photos" class="photos"></div>
+<label class="upload" for="photoInput">＋ הוספת תמונות מהגלריה או המצלמה</label>
+<input type="file" id="photoInput" accept="image/*" multiple hidden onchange="addPhotos(event)">
+<p id="photoCount" class="muted"></p>
+<button type="submit" id="saveButton" class="primary">שמור ביומן היין</button>
+<button type="button" class="secondary" style="width:100%;margin-top:9px" onclick="show('list')">ביטול</button>
+</form>
+</section>
+
+<section id="detail" class="hidden"></section>
+<p class="notice">היומן נשמר במכשיר זה בלבד · מומלץ ליצור גיבוי</p>
+</main>
+
+<script>
+const KEY="myWineJournal_v1";
+let wines=[];
+let photos=[];
+let editing=null;
+let selectedRating=3.5;
+try{
+ const saved=JSON.parse(localStorage.getItem(KEY)||"[]");
+ if(Array.isArray(saved))wines=saved;
+}catch(e){console.warn("Storage unavailable",e)}
+
+function el(id){return document.getElementById(id)}
+function make(tag,cls,txt){
+ const node=document.createElement(tag);
+ if(cls)node.className=cls;
+ if(txt!==undefined)node.textContent=txt;
+ return node;
+}
+function saveData(next){
+ try{
+  localStorage.setItem(KEY,JSON.stringify(next));
+  wines=next;
+  return true;
+ }catch(e){
+  alert("לא ניתן לשמור. ייתכן שהאחסון מלא או חסום. נסו תמונות קטנות יותר.");
+  return false;
+ }
+}
+function show(page){
+ ["list","add","detail"].forEach(p=>el(p).classList.toggle("hidden",p!==page));
+ el("listTab").classList.toggle("active",page==="list"||page==="detail");
+ el("addTab").classList.toggle("active",page==="add");
+ if(page==="list")renderList();
+ window.scrollTo(0,0);
+}
+function newWine(){
+ editing=null;
+ el("wineForm").reset();
+ el("wineDate").value=new Date().toLocaleDateString("en-CA");
+ photos=[];
+ selectedRating=3.5;
+ el("formTitle").textContent="טעימה חדשה";
+ el("saveButton").textContent="שמור ביומן היין";
+ updateRatingUI();
+ renderPhotos();
+ show("add");
+}
+function updateRating(){
+ selectedRating=Number(el("rating").value);
+ updateRatingUI();
+}
+function updateRatingUI(){
+ el("rating").value=selectedRating;
+ el("ratingText").textContent=selectedRating.toFixed(1)+" מתוך 5 כוסות";
+ const area=el("glasses");
+ area.replaceChildren();
+ for(let i=1;i<=5;i++){
+  const b=make("button","glass","🍷");
+  b.type="button";
+  b.classList.add(selectedRating>=i?"full":selectedRating>=i-.5?"half":"empty");
+  b.onclick=()=>{
+   selectedRating=i;
+   updateRatingUI();
+  };
+  area.append(b);
+ }
+}
+function renderPhotos(){
+ const area=el("photos");
+ area.replaceChildren();
+ photos.forEach((src,i)=>{
+  const box=make("div","photo");
+  const img=document.createElement("img");
+  img.src=src;
+  img.alt="תמונת יין";
+  const remove=make("button","","×");
+  remove.type="button";
+  remove.setAttribute("aria-label","הסר תמונה");
+  remove.onclick=()=>{photos.splice(i,1);renderPhotos()};
+  box.append(img,remove);
+  area.append(box);
+ });
+ el("photoCount").textContent=photos.length+" מתוך 5 תמונות";
+}
+function compressPhoto(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onerror=reject;
+  reader.onload=()=>{
+   const img=new Image();
+   img.onerror=reject;
+   img.onload=()=>{
+    const scale=Math.min(1,1000/Math.max(img.width,img.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.round(img.width*scale));
+    canvas.height=Math.max(1,Math.round(img.height*scale));
+    canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+    resolve(canvas.toDataURL("image/jpeg",0.7));
+   };
+   img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+ });
+}
+async function addPhotos(event){
+ const files=Array.from(event.target.files||[]);
+ const allowed=Math.max(0,5-photos.length);
+ if(files.length>allowed)alert("ניתן לצרף עד 5 תמונות בלבד.");
+ for(const file of files.slice(0,allowed)){
+  try{photos.push(await compressPhoto(file))}
+  catch(e){alert("לא ניתן לפתוח אחת מהתמונות.")}
+ }
+ event.target.value="";
+ renderPhotos();
+}
+el("wineForm").addEventListener("submit",event=>{
+ event.preventDefault();
+ const data=Object.fromEntries(new FormData(event.target).entries());
+ if(!data.name||!data.name.trim())return;
+ const wine={
+  id:editing||String(Date.now())+"-"+Math.random().toString(36).slice(2),
+  name:data.name.trim(),
+  winery:data.winery||"",
+  country:data.country||"",
+  region:data.region||"",
+  vintage:data.vintage||"",
+  color:data.color||"",
+  date:data.date||"",
+  notes:data.notes||"",
+  story:data.story||"",
+  rating:selectedRating,
+  photos:[...photos]
+ };
+ const next=editing?wines.map(w=>w.id===editing?wine:w):[wine,...wines];
+ if(saveData(next))show("list");
+});
+function renderList(){
+ const q=el("search").value.trim().toLowerCase();
+ const filtered=wines.filter(w=>[w.name,w.winery,w.country,w.region]
+  .join(" ").toLowerCase().includes(q));
+ el("count").textContent="("+wines.length+")";
+ const area=el("cards");
+ area.replaceChildren();
+ if(!filtered.length){
+  const empty=make("div","empty");
+  empty.append(make("div","emoji","🍇"));
+  empty.append(make("h2","",wines.length?"לא נמצאו יינות":"האוסף שלכם מתחיל כאן"));
+  empty.append(make("p","",wines.length?"נסו חיפוש אחר":"הוסיפו את הבקבוק הראשון וזכרו כל טעימה."));
+  area.append(empty);
+  if(!wines.length){
+   const b=make("button","primary","+ הוספת היין הראשון");
+   b.onclick=newWine;
+   area.append(b);
+  }
+  return;
+ }
+ filtered.forEach(w=>{
+  const card=make("article","card");
+  if(w.photos&&w.photos.length){
+   const img=document.createElement("img");
+   img.src=w.photos[0];
+   img.alt="תמונת "+w.name;
+   card.append(img);
+  }
+  const content=make("div","card-content");
+  content.append(make("h3","",w.name));
+  content.append(make("p","",[w.winery,w.vintage].filter(Boolean).join(" · ")));
+  content.append(make("p","","🍷 "+w.rating+"/5 · "+(w.country||w.color||"")));
+  card.append(content);
+  card.onclick=()=>showDetail(w.id);
+  area.append(card);
+ });
+}
+function showDetail(id){
+ const w=wines.find(item=>item.id===id);
+ if(!w)return;
+ const area=el("detail");
+ area.replaceChildren();
+ const back=make("button","secondary","← חזרה לאוסף");
+ back.onclick=()=>show("list");
+ area.append(back);
+ const box=make("div","detail");
+ box.style.marginTop="13px";
+ box.append(make("h2","",w.name));
+ box.append(make("p","","🍷 "+w.rating+" / 5"));
+ const info=make("div","info");
+ [["יקב",w.winery],["ארץ מוצא",w.country],["אזור גידול",w.region],
+ ["שנת בציר",w.vintage],["צבע",w.color],["תאריך טעימה",w.date]]
+ .forEach(([title,value])=>{
+  if(!value)return;
+  const cell=document.createElement("div");
+  cell.append(make("b","",title));
+  cell.append(document.createTextNode(value));
+  info.append(cell);
+ });
+ box.append(info);
+ [["תווי טעם וריח",w.notes],["הסיפור שלנו",w.story]].forEach(([title,value])=>{
+  if(!value)return;
+  box.append(make("h3","",title));
+  box.append(make("p","story",value));
+ });
+ if(w.photos&&w.photos.length){
+  const gallery=make("div","gallery");
+  w.photos.forEach(src=>{
+   const img=document.createElement("img");
+   img.src=src;
+   img.alt="תמונה מהטעימה";
+   gallery.append(img);
+  });
+  box.append(gallery);
+ }
+ const actions=make("div","actions");
+ const edit=make("button","secondary","עריכה");
+ edit.onclick=()=>editWine(w.id);
+ const del=make("button","secondary","מחיקה");
+ del.onclick=()=>{
+  if(confirm("למחוק את היין מהיומן?")){
+   if(saveData(wines.filter(item=>item.id!==id)))show("list");
+  }
+ };
+ actions.append(edit,del);
+ box.append(actions);
+ area.append(box);
+ show("detail");
+}
+function editWine(id){
+ const w=wines.find(item=>item.id===id);
+ if(!w)return;
+ editing=id;
+ el("wineForm").reset();
+ for(const [key,value] of Object.entries(w)){
+  const field=el("wineForm").elements.namedItem(key);
+  if(field&&typeof value==="string")field.value=value;
+ }
+ photos=[...(w.photos||[])];
+ selectedRating=Number(w.rating)||3.5;
+ el("formTitle").textContent="עריכת יין";
+ el("saveButton").textContent="שמור שינויים";
+ renderPhotos();
+ updateRatingUI();
+ show("add");
+}
+function exportBackup(){
+ const data=JSON.stringify({version:1,wines:wines},null,2);
+ const blob=new Blob([data],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+ link.href=url;
+ link.download="wine-journal-backup-"+new Date().toISOString().slice(0,10)+".json";
+ document.body.append(link);
+ link.click();
+ link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+async function importBackup(event){
+ const file=event.target.files[0];
+ if(!file)return;
+ try{
+  const parsed=JSON.parse(await file.text());
+  if(!parsed||!Array.isArray(parsed.wines))throw Error("Invalid backup");
+  if(!confirm("שחזור הגיבוי יחליף את כל היינות הקיימים. להמשיך?"))return;
+  if(saveData(parsed.wines))show("list");
+ }catch(e){
+  alert("קובץ הגיבוי אינו תקין.");
+ }finally{
+  event.target.value="";
+ }
+}
+newWine();
+show("list");
+</script>
+</body>
+</html>
